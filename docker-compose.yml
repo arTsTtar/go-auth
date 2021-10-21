@@ -1,0 +1,16 @@
+version: "2"
+
+volumes:
+  go_auth_db:
+    driver: local
+
+services:
+  go_auth_db:
+    image: mariadb:10.6.4
+    container_name: go-auth-db
+    restart: "no"
+    ports:
+      - "3320:3306"
+    env_file: .env
+    volumes:
+      - go_auth_db:/var/lib/mysql
