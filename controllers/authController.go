@@ -1,11 +1,16 @@
 package controllers
 
 import (
+	"bytes"
+	"encoding/base64"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
+	"github.com/pquerna/otp/totp"
 	"go-auth/db"
 	"go-auth/models"
+	"go-auth/response"
 	"golang.org/x/crypto/bcrypt"
+	"image/png"
 	"strconv"
 	"time"
 )
@@ -19,15 +24,44 @@ func Register(c *fiber.Ctx) error {
 		return err
 	}
 
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      data["name"],
+		AccountName: data["email"],
+	})
 	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
+	secret, _ := bcrypt.GenerateFromPassword([]byte(key.Secret()), 14)
+
+	if err != nil {
+		panic(err)
+	}
+	var buf bytes.Buffer
+	img, err := key.Image(200, 200)
+	if err != nil {
+		panic(err)
+	}
+	encodingErr := png.Encode(&buf, img)
+
+	if encodingErr != nil {
+		panic(encodingErr)
+	}
+
+	imgBase64Str := base64.StdEncoding.EncodeToString(buf.Bytes())
+
 	user := models.User{
 		Name:     data["name"],
 		Email:    data["email"],
 		Password: password,
+		Secret:   secret,
 	}
 	db.DB.Create(&user)
 
-	return c.JSON(user)
+	userResponse := response.UserResponse{
+		Name:   user.Name,
+		Email:  user.Email,
+		Secret: key.Secret(),
+		QrCode: imgBase64Str,
+	}
+	return c.JSON(userResponse)
 }
 
 func Login(c *fiber.Ctx) error {
