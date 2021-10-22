@@ -56,6 +56,7 @@ func Register(c *fiber.Ctx) error {
 	db.DB.Create(&user)
 
 	userResponse := response.UserResponse{
+		Id:     user.Id,
 		Name:   user.Name,
 		Email:  user.Email,
 		Secret: key.Secret(),
