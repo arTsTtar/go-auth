@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"github.com/pquerna/otp/totp"
-	"go-auth/models/orm"
+	"go-auth/models/request"
 	_struct "go-auth/models/struct"
 	"image/png"
 )
 
-func GenerateB64Qr(data orm.User) _struct.QrData {
+func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 	if data.TwoFactEnabled {
 		key, err := totp.Generate(totp.GenerateOpts{
 			Issuer:      data.Name,

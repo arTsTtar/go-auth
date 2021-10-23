@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go-auth/db"
 	"go-auth/models/orm"
+	"go-auth/models/request"
 	"go-auth/models/response"
 	"go-auth/utils"
 	"golang.org/x/crypto/bcrypt"
@@ -16,13 +17,22 @@ import (
 const SecretKey = "secret"
 
 func Register(c *fiber.Ctx) error {
-	var data orm.User
+	var data request.UserRequest
 
 	if err := json.Unmarshal(c.Body(), &data); err != nil {
 		return err
 	}
 
-	password, _ := bcrypt.GenerateFromPassword(data.Password, 14)
+	var existingUser orm.User
+	db.DB.Where("email = ?", data.Email).First(&existingUser)
+
+	if existingUser.Id != 0 {
+		c.Status(fiber.StatusBadRequest)
+		return c.JSON(fiber.Map{
+			"message": "User with this email already exists",
+		})
+	}
+	password, _ := bcrypt.GenerateFromPassword([]byte(data.Password), 14)
 
 	var qrData = utils.GenerateB64Qr(data)
 
