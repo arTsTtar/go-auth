@@ -1,9 +1,9 @@
 package models
 
 type User struct {
-	Id       uint
-	Name     string `gorm:"notnull"`
-	Email    string `gorm:"unique;notnull"`
-	Password []byte `gorm:"notnull"`
-	Secret   []byte `gorm:"notnull"`
+	Id       uint   `json:"id"`
+	Name     string `json:"name" gorm:"notnull"`
+	Email    string `json:"email" gorm:"unique;notnull"`
+	Password []byte `json:"-" gorm:"notnull"`
+	Secret   []byte `json:"-" gorm:"notnull"`
 }
