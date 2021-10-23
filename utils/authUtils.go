@@ -3,10 +3,14 @@ package utils
 import (
 	"bytes"
 	"encoding/base64"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gofiber/fiber/v2"
 	"github.com/pquerna/otp/totp"
 	"go-auth/models/dto/request"
 	_struct "go-auth/models/struct"
 	"image/png"
+	"strconv"
+	"time"
 )
 
 func GenerateB64Qr(data request.UserRequest) _struct.QrData {
@@ -40,4 +44,24 @@ func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 		Secret:         "",
 		QrCode:         "",
 	}
+}
+
+func CreateAuthCookie(userId uint, secret string) (fiber.Cookie, error) {
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+		Issuer:    strconv.Itoa(int(userId)),
+		ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
+	})
+
+	token, err := claims.SignedString([]byte(secret))
+
+	if err != nil {
+		return fiber.Cookie{}, err
+	}
+
+	return fiber.Cookie{
+		Name:     "jwtToken",
+		Value:    token,
+		Expires:  time.Now().Add(time.Minute * 5),
+		HTTPOnly: true,
+	}, nil
 }
