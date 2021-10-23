@@ -1,7 +1,7 @@
 package db
 
 import (
-	"go-auth/models"
+	"go-auth/models/orm"
 	"go-auth/utils"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -25,6 +25,6 @@ func Connect() {
 
 	DB = connection
 
-	connection.AutoMigrate(&models.User{})
+	connection.AutoMigrate(&orm.User{})
 
 }

@@ -1,16 +1,14 @@
 package controllers
 
 import (
-	"bytes"
-	"encoding/base64"
+	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
-	"github.com/pquerna/otp/totp"
 	"go-auth/db"
-	"go-auth/models"
-	"go-auth/response"
+	"go-auth/models/orm"
+	"go-auth/models/response"
+	"go-auth/utils"
 	"golang.org/x/crypto/bcrypt"
-	"image/png"
 	"strconv"
 	"time"
 )
@@ -18,49 +16,32 @@ import (
 const SecretKey = "secret"
 
 func Register(c *fiber.Ctx) error {
-	var data map[string]string
+	var data orm.User
 
-	if err := c.BodyParser(&data); err != nil {
+	if err := json.Unmarshal(c.Body(), &data); err != nil {
 		return err
 	}
 
-	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      data["name"],
-		AccountName: data["email"],
-	})
-	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
-	secret, _ := bcrypt.GenerateFromPassword([]byte(key.Secret()), 14)
+	password, _ := bcrypt.GenerateFromPassword(data.Password, 14)
 
-	if err != nil {
-		panic(err)
-	}
-	var buf bytes.Buffer
-	img, err := key.Image(200, 200)
-	if err != nil {
-		panic(err)
-	}
-	encodingErr := png.Encode(&buf, img)
+	var qrData = utils.GenerateB64Qr(data)
 
-	if encodingErr != nil {
-		panic(encodingErr)
-	}
-
-	imgBase64Str := base64.StdEncoding.EncodeToString(buf.Bytes())
-
-	user := models.User{
-		Name:     data["name"],
-		Email:    data["email"],
-		Password: password,
-		Secret:   secret,
+	user := orm.User{
+		Name:           data.Name,
+		Email:          data.Email,
+		Password:       password,
+		TwoFactEnabled: qrData.TwoFactEnabled,
+		TwoFactSecret:  qrData.Secret,
 	}
 	db.DB.Create(&user)
 
 	userResponse := response.UserResponse{
-		Id:     user.Id,
-		Name:   user.Name,
-		Email:  user.Email,
-		Secret: key.Secret(),
-		QrCode: imgBase64Str,
+		Id:             user.Id,
+		Name:           user.Name,
+		Email:          user.Email,
+		TwoFactEnabled: qrData.TwoFactEnabled,
+		Secret:         qrData.Secret,
+		QrCode:         qrData.QrCode,
 	}
 	return c.JSON(userResponse)
 }
@@ -72,7 +53,7 @@ func Login(c *fiber.Ctx) error {
 		return err
 	}
 
-	var user models.User
+	var user orm.User
 
 	db.DB.Where("email = ?", data["email"]).First(&user)
 
@@ -128,7 +109,7 @@ func User(c *fiber.Ctx) error {
 
 	claims := token.Claims.(*jwt.StandardClaims)
 
-	var user models.User
+	var user orm.User
 
 	db.DB.Where("id = ?", claims.Issuer).First(&user)
 
