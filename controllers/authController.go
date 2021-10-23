@@ -110,7 +110,14 @@ func User(c *fiber.Ctx) error {
 
 	db.DB.Where("id = ?", claims.Issuer).First(&user)
 
-	return c.JSON(user)
+	userResponse := response.SimpleUserResponse{
+		Id:             user.Id,
+		Name:           user.Name,
+		Email:          user.Email,
+		TwoFactEnabled: user.TwoFactEnabled,
+	}
+
+	return c.JSON(userResponse)
 }
 
 func Logout(c *fiber.Ctx) error {
