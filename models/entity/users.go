@@ -1,4 +1,4 @@
-package orm
+package entity
 
 type User struct {
 	Id             uint
@@ -6,5 +6,5 @@ type User struct {
 	Email          string `gorm:"unique;notnull"`
 	Password       []byte `gorm:"notnull"`
 	TwoFactEnabled bool   `gorm:"notnull;default=false"`
-	TwoFactSecret  string
+	TwoFactSecret  string `json:"-"`
 }

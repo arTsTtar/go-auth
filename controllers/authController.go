@@ -5,9 +5,9 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"go-auth/db"
-	"go-auth/models/orm"
-	"go-auth/models/request"
-	"go-auth/models/response"
+	"go-auth/models/dto/request"
+	"go-auth/models/dto/response"
+	"go-auth/models/entity"
 	"go-auth/utils"
 	"golang.org/x/crypto/bcrypt"
 	"strconv"
@@ -23,7 +23,7 @@ func Register(c *fiber.Ctx) error {
 		return err
 	}
 
-	var existingUser orm.User
+	var existingUser entity.User
 	db.DB.Where("email = ?", data.Email).First(&existingUser)
 
 	if existingUser.Id != 0 {
@@ -36,7 +36,7 @@ func Register(c *fiber.Ctx) error {
 
 	var qrData = utils.GenerateB64Qr(data)
 
-	user := orm.User{
+	user := entity.User{
 		Name:           data.Name,
 		Email:          data.Email,
 		Password:       password,
@@ -45,7 +45,7 @@ func Register(c *fiber.Ctx) error {
 	}
 	db.DB.Create(&user)
 
-	userResponse := response.UserResponse{
+	userResponse := response.UserCreationResponse{
 		Id:             user.Id,
 		Name:           user.Name,
 		Email:          user.Email,
@@ -63,7 +63,7 @@ func Login(c *fiber.Ctx) error {
 		return err
 	}
 
-	var user orm.User
+	var user entity.User
 
 	db.DB.Where("email = ?", data["email"]).First(&user)
 
@@ -119,7 +119,7 @@ func User(c *fiber.Ctx) error {
 
 	claims := token.Claims.(*jwt.StandardClaims)
 
-	var user orm.User
+	var user entity.User
 
 	db.DB.Where("id = ?", claims.Issuer).First(&user)
 

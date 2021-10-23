@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"github.com/pquerna/otp/totp"
-	"go-auth/models/request"
+	"go-auth/models/dto/request"
 	_struct "go-auth/models/struct"
 	"image/png"
 )
