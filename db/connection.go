@@ -25,6 +25,6 @@ func Connect() {
 
 	DB = connection
 
-	connection.AutoMigrate(&entity.User{})
+	connection.AutoMigrate(&entity.User{}, &entity.BackupCode{})
 
 }

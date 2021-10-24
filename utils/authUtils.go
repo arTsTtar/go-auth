@@ -64,4 +64,15 @@ func CreateAuthCookie(userId uint, secret string) (fiber.Cookie, error) {
 		Expires:  time.Now().Add(time.Minute * 5),
 		HTTPOnly: true,
 	}, nil
+
+}
+func CreateBackupCodes() [6]string {
+	var backupCodes [6]string
+	backupCodes[0] = GenerateRandomPasswd()
+	backupCodes[1] = GenerateRandomPasswd()
+	backupCodes[2] = GenerateRandomPasswd()
+	backupCodes[3] = GenerateRandomPasswd()
+	backupCodes[4] = GenerateRandomPasswd()
+	backupCodes[5] = GenerateRandomPasswd()
+	return backupCodes
 }

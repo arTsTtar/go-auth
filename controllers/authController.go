@@ -31,7 +31,9 @@ func Register(c *fiber.Ctx) error {
 			"message": "User with this email already exists",
 		})
 	}
-	password, _ := bcrypt.GenerateFromPassword([]byte(data.Password), 14)
+	password, _ := bcrypt.GenerateFromPassword([]byte(data.Password), 12)
+
+	var backupPasswords = utils.CreateBackupCodes()
 
 	var qrData = utils.GenerateB64Qr(data)
 
@@ -44,6 +46,15 @@ func Register(c *fiber.Ctx) error {
 	}
 	db.DB.Create(&user)
 
+	for i := 0; i < len(backupPasswords); i++ {
+		backupPasswd, _ := bcrypt.GenerateFromPassword([]byte(backupPasswords[i]), 12)
+		backupCode := entity.BackupCode{
+			UserId:     user.Id,
+			BackupCode: backupPasswd,
+		}
+		db.DB.Create(&backupCode)
+	}
+
 	userResponse := response.UserCreationResponse{
 		Id:             user.Id,
 		Name:           user.Name,
@@ -51,6 +62,7 @@ func Register(c *fiber.Ctx) error {
 		TwoFactEnabled: qrData.TwoFactEnabled,
 		Secret:         qrData.Secret,
 		QrCode:         qrData.QrCode,
+		BackupCodes:    backupPasswords,
 	}
 	return c.JSON(userResponse)
 }
