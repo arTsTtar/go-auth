@@ -31,6 +31,12 @@ func (a authController) Register(c *fiber.Ctx) error {
 		return err
 	}
 
+	if !request.ValidateCreation(data) {
+		c.Status(fiber.StatusBadRequest)
+		return c.JSON(fiber.Map{
+			"message": "Bad request.",
+		})
+	}
 	userResponse, err := a.authService.Register(data)
 	if err != nil {
 		c.Status(fiber.StatusBadRequest)

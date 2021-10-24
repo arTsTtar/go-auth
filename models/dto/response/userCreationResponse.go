@@ -5,7 +5,7 @@ type UserCreationResponse struct {
 	Name           string    `json:"name"`
 	Email          string    `json:"email"`
 	TwoFactEnabled bool      `json:"twoFaEnabled"`
-	Secret         string    `json:"secret"`
-	QrCode         string    `json:"qrCode"`
+	Secret         string    `json:"secret,omitempty"`
+	QrCode         string    `json:"qrCode,omitempty"`
 	BackupCodes    [6]string `json:"backupCodes"`
 }
