@@ -11,7 +11,7 @@ type backupCodeRepository struct {
 }
 
 type BackupCodeRepository interface {
-	SaveAll(entity.Users) (entity.Users, error)
+	SaveAll(codes entity.BackupCodes) (entity.BackupCodes, error)
 	Delete(id string) error
 }
 
@@ -21,10 +21,10 @@ func NewBackupCodeRepository(db *gorm.DB) BackupCodeRepository {
 	}
 }
 
-func (b backupCodeRepository) SaveAll(users entity.Users) (entity.Users, error) {
+func (b backupCodeRepository) SaveAll(backupCodes entity.BackupCodes) (entity.BackupCodes, error) {
 	log.Print("[BackupCodeRepository]...SaveAll")
-	err := b.DB.Create(&users).Error
-	return users, err
+	err := b.DB.Create(&backupCodes).Error
+	return backupCodes, err
 }
 
 func (b backupCodeRepository) Delete(id string) error {

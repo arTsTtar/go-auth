@@ -16,8 +16,8 @@ import (
 func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 	if data.TwoFactEnabled {
 		key, err := totp.Generate(totp.GenerateOpts{
-			Issuer:      data.Name,
-			AccountName: data.Email,
+			Issuer:      *data.Name,
+			AccountName: *data.Email,
 		})
 
 		if err != nil {

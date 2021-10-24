@@ -3,7 +3,6 @@ package services
 import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
-	"go-auth/db"
 	"go-auth/models/dto/request"
 	"go-auth/models/dto/response"
 	"go-auth/models/entity"
@@ -58,25 +57,27 @@ func (a authService) Login(data map[string]string) (*fiber.Cookie, error, int) {
 
 func (a authService) Register(data request.UserRequest) (response.UserCreationResponse, error) {
 	var existingUser entity.User
-	existingUser, err := a.userRepository.FindUserByEmail(data.Email)
+	existingUser, _ = a.userRepository.FindUserByEmail(*data.Email)
 
 	if existingUser.Id != 0 {
-		return response.UserCreationResponse{}, err
+		return response.UserCreationResponse{}, fiber.NewError(400, "User already exists")
 	}
-	password, _ := bcrypt.GenerateFromPassword([]byte(data.Password), 12)
+	password, _ := bcrypt.GenerateFromPassword([]byte(*data.Password), 12)
 
 	var backupPasswords = utils.CreateBackupCodes()
 
 	var qrData = utils.GenerateB64Qr(data)
 
 	user := entity.User{
-		Name:           data.Name,
-		Email:          data.Email,
+		Name:           *data.Name,
+		Email:          *data.Email,
 		Password:       password,
 		TwoFactEnabled: qrData.TwoFactEnabled,
 		TwoFactSecret:  qrData.Secret,
 	}
-	db.DB.Create(&user)
+	user, _ = a.userRepository.Save(user)
+
+	var userBackupCodes = entity.BackupCodes{}
 
 	for i := 0; i < len(backupPasswords); i++ {
 		backupPasswd, _ := bcrypt.GenerateFromPassword([]byte(backupPasswords[i]), 12)
@@ -84,8 +85,9 @@ func (a authService) Register(data request.UserRequest) (response.UserCreationRe
 			UserId:     user.Id,
 			BackupCode: backupPasswd,
 		}
-		db.DB.Create(&backupCode)
+		userBackupCodes = append(userBackupCodes, &backupCode)
 	}
+	_, _ = a.backupCodeRepository.SaveAll(userBackupCodes)
 
 	userResponse := response.UserCreationResponse{
 		Id:             user.Id,
@@ -114,7 +116,7 @@ func (a authService) GetUserDetailsFromToken(token *jwt.Token) (response.SimpleU
 
 	var user entity.User
 
-	db.DB.Where("id = ?", claims.Issuer).First(&user)
+	user, _ = a.userRepository.FindUserById(claims.Issuer)
 
 	userResponse := response.SimpleUserResponse{
 		Id:             user.Id,
