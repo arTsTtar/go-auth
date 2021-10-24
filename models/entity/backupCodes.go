@@ -5,3 +5,5 @@ type BackupCode struct {
 	UserId     uint   `gorm:"notnull"`
 	BackupCode []byte `json:"-" gorm:"notnull"`
 }
+
+type BackupCodes []*BackupCode

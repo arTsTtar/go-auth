@@ -9,3 +9,5 @@ type User struct {
 	TwoFactSecret  string       `json:"-"`
 	BackupCodes    []BackupCode `gorm:"foreignKey:UserId; constraint:OnUpdate:CASCADE, OnDelete:CASCADE" json:"-"`
 }
+
+type Users []*User
