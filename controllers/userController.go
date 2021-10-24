@@ -3,16 +3,24 @@ package controllers
 import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
-	"go-auth/db"
-	"go-auth/models/dto/response"
-	"go-auth/models/entity"
+	"go-auth/services"
 )
 
-type UserService interface {
-	User(c *fiber.Ctx)
+type UserController interface {
+	User(c *fiber.Ctx) error
 }
 
-func User(c *fiber.Ctx) error {
+type userController struct {
+	authService services.AuthService
+}
+
+func NewUerController(as services.AuthService) UserController {
+	return userController{
+		authService: as,
+	}
+}
+
+func (u userController) User(c *fiber.Ctx) error {
 	cookie := c.Cookies("jwtToken")
 	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(SecretKey), nil
@@ -25,18 +33,6 @@ func User(c *fiber.Ctx) error {
 		})
 	}
 
-	claims := token.Claims.(*jwt.StandardClaims)
-
-	var user entity.User
-
-	db.DB.Where("id = ?", claims.Issuer).First(&user)
-
-	userResponse := response.SimpleUserResponse{
-		Id:             user.Id,
-		Name:           user.Name,
-		Email:          user.Email,
-		TwoFactEnabled: user.TwoFactEnabled,
-	}
-
+	userResponse, err := u.authService.GetUserDetailsFromToken(token)
 	return c.JSON(userResponse)
 }

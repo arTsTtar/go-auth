@@ -3,119 +3,70 @@ package controllers
 import (
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
-	"go-auth/db"
 	"go-auth/models/dto/request"
-	"go-auth/models/dto/response"
-	"go-auth/models/entity"
-	"go-auth/utils"
-	"golang.org/x/crypto/bcrypt"
-	"time"
+	"go-auth/services"
 )
 
 type AuthController interface {
-	Register(c *fiber.Ctx)
-	Login(c *fiber.Ctx)
-	Logout(c *fiber.Ctx)
+	Register(c *fiber.Ctx) error
+	Login(c *fiber.Ctx) error
+	Logout(c *fiber.Ctx) error
+}
+
+type authController struct {
+	authService services.AuthService
+}
+
+func NewAuthController(s services.AuthService) AuthController {
+	return authController{
+		authService: s,
+	}
 }
 
 const SecretKey = "adsfadsfasdfnuasnfuias23as98fasj8dfjas/asdfiijasdf"
 
-func Register(c *fiber.Ctx) error {
+func (a authController) Register(c *fiber.Ctx) error {
 	var data request.UserRequest
-
 	if err := json.Unmarshal(c.Body(), &data); err != nil {
 		return err
 	}
 
-	var existingUser entity.User
-	db.DB.Where("email = ?", data.Email).First(&existingUser)
-
-	if existingUser.Id != 0 {
+	userResponse, err := a.authService.Register(data)
+	if err != nil {
 		c.Status(fiber.StatusBadRequest)
 		return c.JSON(fiber.Map{
-			"message": "User with this email already exists",
+			"message": err,
 		})
-	}
-	password, _ := bcrypt.GenerateFromPassword([]byte(data.Password), 12)
-
-	var backupPasswords = utils.CreateBackupCodes()
-
-	var qrData = utils.GenerateB64Qr(data)
-
-	user := entity.User{
-		Name:           data.Name,
-		Email:          data.Email,
-		Password:       password,
-		TwoFactEnabled: qrData.TwoFactEnabled,
-		TwoFactSecret:  qrData.Secret,
-	}
-	db.DB.Create(&user)
-
-	for i := 0; i < len(backupPasswords); i++ {
-		backupPasswd, _ := bcrypt.GenerateFromPassword([]byte(backupPasswords[i]), 12)
-		backupCode := entity.BackupCode{
-			UserId:     user.Id,
-			BackupCode: backupPasswd,
-		}
-		db.DB.Create(&backupCode)
-	}
-
-	userResponse := response.UserCreationResponse{
-		Id:             user.Id,
-		Name:           user.Name,
-		Email:          user.Email,
-		TwoFactEnabled: qrData.TwoFactEnabled,
-		Secret:         qrData.Secret,
-		QrCode:         qrData.QrCode,
-		BackupCodes:    backupPasswords,
 	}
 	return c.JSON(userResponse)
 }
 
-func Login(c *fiber.Ctx) error {
+func (a authController) Login(c *fiber.Ctx) error {
 	var data map[string]string
 
 	if err := c.BodyParser(&data); err != nil {
 		return err
 	}
-
-	var user entity.User
-
-	db.DB.Where("email = ?", data["email"]).First(&user)
-
-	err := bcrypt.CompareHashAndPassword(user.Password, []byte(data["password"]))
-
-	if err != nil || user.Id == 0 {
-		c.Status(fiber.StatusBadRequest)
-		return c.JSON(fiber.Map{
-			"message": "Wrong credentials",
-		})
-	}
-
-	cookie, err := utils.CreateAuthCookie(user.Id, SecretKey)
+	cookie, err, status := a.authService.Login(data)
 
 	if err != nil {
-		c.Status(fiber.StatusInternalServerError)
+		c.Status(status)
 		return c.JSON(fiber.Map{
-			"message": "Could not log in.",
+			"message": err.Error(),
 		})
 	}
 
-	c.Cookie(&cookie)
+	c.Cookie(cookie)
 
+	c.Status(status)
 	return c.JSON(fiber.Map{
 		"message": "Successfully logged in!",
 	})
 }
 
-func Logout(c *fiber.Ctx) error {
-	cookie := fiber.Cookie{
-		Name:     "jwtToken",
-		Value:    "",
-		Expires:  time.Now().Add(-time.Minute * 5),
-		HTTPOnly: true,
-	}
-	c.Cookie(&cookie)
+func (a authController) Logout(c *fiber.Ctx) error {
+	cookie := a.authService.Logout()
+	c.Cookie(cookie)
 	return c.JSON(fiber.Map{
 		"message": "Successfully logged out.",
 	})

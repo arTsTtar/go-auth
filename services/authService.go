@@ -1,16 +1,23 @@
 package services
 
 import (
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
+	"go-auth/db"
+	"go-auth/models/dto/request"
+	"go-auth/models/dto/response"
+	"go-auth/models/entity"
 	"go-auth/repository"
 	"go-auth/utils"
 	"golang.org/x/crypto/bcrypt"
+	"time"
 )
 
 type AuthService interface {
-	Login(c *fiber.Ctx) error
-	Register(c *fiber.Ctx) error
-	Logout(c *fiber.Ctx) error
+	Login(data map[string]string) (*fiber.Cookie, error, int)
+	Register(c request.UserRequest) (response.UserCreationResponse, error)
+	Logout() *fiber.Cookie
+	GetUserDetailsFromToken(token *jwt.Token) (response.SimpleUserResponse, error)
 }
 
 type authService struct {
@@ -27,51 +34,93 @@ func NewAuthService(ur repository.UserRepository, bcr repository.BackupCodeRepos
 
 const SecretKey = "adsfadsfasdfnuasnfuias23as98fasj8dfjas/asdfiijasdf"
 
-func (a authService) Login(c *fiber.Ctx) error {
-	var data map[string]string
-
-	if err := c.BodyParser(&data); err != nil {
-		return err
-	}
-
+func (a authService) Login(data map[string]string) (*fiber.Cookie, error, int) {
 	user, err := a.userRepository.FindUserByEmail(data["email"])
 
 	if err != nil {
-		c.Status(fiber.StatusBadRequest)
-		return c.JSON(fiber.Map{
-			"message": err,
-		})
+		return nil, err, 400
 	}
 
 	err = bcrypt.CompareHashAndPassword(user.Password, []byte(data["password"]))
 
 	if err != nil || user.Id == 0 {
-		c.Status(fiber.StatusBadRequest)
-		return c.JSON(fiber.Map{
-			"message": "Wrong credentials",
-		})
+		return nil, err, 400
 	}
 
 	cookie, err := utils.CreateAuthCookie(user.Id, SecretKey)
 
 	if err != nil {
-		c.Status(fiber.StatusInternalServerError)
-		return c.JSON(fiber.Map{
-			"message": "Could not log in.",
-		})
+		return nil, err, 500
 	}
 
-	c.Cookie(&cookie)
-
-	return c.JSON(fiber.Map{
-		"message": "Successfully logged in!",
-	})
+	return &cookie, err, 200
 }
 
-func (a authService) Register(c *fiber.Ctx) error {
-	panic("implement me")
+func (a authService) Register(data request.UserRequest) (response.UserCreationResponse, error) {
+	var existingUser entity.User
+	existingUser, err := a.userRepository.FindUserByEmail(data.Email)
+
+	if existingUser.Id != 0 {
+		return response.UserCreationResponse{}, err
+	}
+	password, _ := bcrypt.GenerateFromPassword([]byte(data.Password), 12)
+
+	var backupPasswords = utils.CreateBackupCodes()
+
+	var qrData = utils.GenerateB64Qr(data)
+
+	user := entity.User{
+		Name:           data.Name,
+		Email:          data.Email,
+		Password:       password,
+		TwoFactEnabled: qrData.TwoFactEnabled,
+		TwoFactSecret:  qrData.Secret,
+	}
+	db.DB.Create(&user)
+
+	for i := 0; i < len(backupPasswords); i++ {
+		backupPasswd, _ := bcrypt.GenerateFromPassword([]byte(backupPasswords[i]), 12)
+		backupCode := entity.BackupCode{
+			UserId:     user.Id,
+			BackupCode: backupPasswd,
+		}
+		db.DB.Create(&backupCode)
+	}
+
+	userResponse := response.UserCreationResponse{
+		Id:             user.Id,
+		Name:           user.Name,
+		Email:          user.Email,
+		TwoFactEnabled: qrData.TwoFactEnabled,
+		Secret:         qrData.Secret,
+		QrCode:         qrData.QrCode,
+		BackupCodes:    backupPasswords,
+	}
+	return userResponse, nil
 }
 
-func (a authService) Logout(c *fiber.Ctx) error {
-	panic("implement me")
+func (a authService) Logout() *fiber.Cookie {
+	cookie := fiber.Cookie{
+		Name:     "jwtToken",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Minute * 5),
+		HTTPOnly: true,
+	}
+	return &cookie
+}
+
+func (a authService) GetUserDetailsFromToken(token *jwt.Token) (response.SimpleUserResponse, error) {
+	claims := token.Claims.(*jwt.StandardClaims)
+
+	var user entity.User
+
+	db.DB.Where("id = ?", claims.Issuer).First(&user)
+
+	userResponse := response.SimpleUserResponse{
+		Id:             user.Id,
+		Name:           user.Name,
+		Email:          user.Email,
+		TwoFactEnabled: user.TwoFactEnabled,
+	}
+	return userResponse, nil
 }
