@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/base32"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func GenerateRandomPasswd() string {
@@ -16,4 +17,13 @@ func getToken(length int) string {
 		panic(err)
 	}
 	return base32.StdEncoding.EncodeToString(randomBytes)[:length]
+}
+
+func CompareHashAndPassword(hash []byte, password []byte) error {
+	err := bcrypt.CompareHashAndPassword(hash, password)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -10,6 +10,7 @@ import (
 type AuthController interface {
 	Register(c *fiber.Ctx) error
 	Login(c *fiber.Ctx) error
+	AltLogin(c *fiber.Ctx) error
 	Logout(c *fiber.Ctx) error
 }
 
@@ -54,6 +55,29 @@ func (a authController) Login(c *fiber.Ctx) error {
 		return err
 	}
 	cookie, err, status := a.authService.Login(data)
+
+	if err != nil {
+		c.Status(status)
+		return c.JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	c.Cookie(cookie)
+
+	c.Status(status)
+	return c.JSON(fiber.Map{
+		"message": "Successfully logged in!",
+	})
+}
+
+func (a authController) AltLogin(c *fiber.Ctx) error {
+	var data map[string]string
+
+	if err := c.BodyParser(&data); err != nil {
+		return err
+	}
+	cookie, err, status := a.authService.BackupCodeLogin(data)
 
 	if err != nil {
 		c.Status(status)

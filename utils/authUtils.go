@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const SecretKey = "adsfadsfasdfnuasnfuias23as98fasj8dfjas/asdfiijasdf"
+
 func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 	if data.TwoFactEnabled {
 		key, err := totp.Generate(totp.GenerateOpts{
@@ -44,6 +46,17 @@ func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 		Secret:         "",
 		QrCode:         "",
 	}
+}
+
+func CreateAuthCookieAndHandleError(userId uint) (*fiber.Cookie, error, int) {
+	cookie, err := CreateAuthCookie(userId, SecretKey)
+
+	if err != nil {
+		return nil, err, 500
+	}
+
+	return &cookie, err, 200
+
 }
 
 func CreateAuthCookie(userId uint, secret string) (fiber.Cookie, error) {

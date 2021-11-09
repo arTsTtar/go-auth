@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"go-auth/models/dto/request"
@@ -14,6 +15,7 @@ import (
 
 type AuthService interface {
 	Login(data map[string]string) (*fiber.Cookie, error, int)
+	BackupCodeLogin(data map[string]string) (*fiber.Cookie, error, int)
 	Register(c request.UserRequest) (response.UserCreationResponse, error)
 	Logout() *fiber.Cookie
 	GetUserDetailsFromToken(token *jwt.Token) (response.SimpleUserResponse, error)
@@ -31,28 +33,45 @@ func NewAuthService(ur repository.UserRepository, bcr repository.BackupCodeRepos
 	}
 }
 
-const SecretKey = "adsfadsfasdfnuasnfuias23as98fasj8dfjas/asdfiijasdf"
-
 func (a authService) Login(data map[string]string) (*fiber.Cookie, error, int) {
-	user, err := a.userRepository.FindUserByEmail(data["email"])
-
+	user, err := a.getUserByEmail(data["email"])
 	if err != nil {
 		return nil, err, 400
 	}
 
-	err = bcrypt.CompareHashAndPassword(user.Password, []byte(data["password"]))
-
+	err = utils.CompareHashAndPassword(user.Password, []byte(data["password"]))
 	if err != nil || user.Id == 0 {
 		return nil, err, 400
 	}
 
-	cookie, err := utils.CreateAuthCookie(user.Id, SecretKey)
+	return utils.CreateAuthCookieAndHandleError(user.Id)
+}
 
+func (a authService) BackupCodeLogin(data map[string]string) (*fiber.Cookie, error, int) {
+
+	user, err := a.getUserByEmail(data["email"])
 	if err != nil {
-		return nil, err, 500
+		return nil, err, 400
 	}
 
-	return &cookie, err, 200
+	var backupCodes entity.BackupCodes
+	backupCodes, err = a.backupCodeRepository.FindByUser(*user)
+
+	for i := 0; i < len(backupCodes); i++ {
+		err = utils.CompareHashAndPassword(backupCodes[i].BackupCode, []byte(data["password"]))
+		if err != nil {
+			continue
+		}
+
+		err := a.backupCodeRepository.DeleteById(backupCodes[i].Id)
+
+		if err != nil {
+			return nil, errors.New("could not delete backup code"), 500
+		}
+
+		return utils.CreateAuthCookieAndHandleError(user.Id)
+	}
+	return nil, errors.New("unauthorized"), 400
 }
 
 func (a authService) Register(data request.UserRequest) (response.UserCreationResponse, error) {
@@ -125,4 +144,13 @@ func (a authService) GetUserDetailsFromToken(token *jwt.Token) (response.SimpleU
 		TwoFactEnabled: user.TwoFactEnabled,
 	}
 	return userResponse, nil
+}
+
+func (a authService) getUserByEmail(email string) (*entity.User, error) {
+	user, err := a.userRepository.FindUserByEmail(email)
+
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
