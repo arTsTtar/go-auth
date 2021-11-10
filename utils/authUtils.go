@@ -49,8 +49,8 @@ func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 	}
 }
 
-func CreateAuthCookieAndHandleError(userId uint) (*fiber.Cookie, error, int) {
-	cookie, err := CreateAuthCookie(userId, SecretKey)
+func CreateAuthCookieAndHandleError(userId uint, minutes time.Duration) (*fiber.Cookie, error, int) {
+	cookie, err := CreateAuthCookie(userId, SecretKey, minutes)
 
 	if err != nil {
 		return nil, err, 500
@@ -60,10 +60,10 @@ func CreateAuthCookieAndHandleError(userId uint) (*fiber.Cookie, error, int) {
 
 }
 
-func CreateAuthCookie(userId uint, secret string) (fiber.Cookie, error) {
+func CreateAuthCookie(userId uint, secret string, minutes time.Duration) (fiber.Cookie, error) {
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		Issuer:    strconv.Itoa(int(userId)),
-		ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
+		ExpiresAt: time.Now().Add(time.Minute * minutes).Unix(),
 	})
 
 	token, err := claims.SignedString([]byte(secret))

@@ -46,7 +46,7 @@ func (a authService) Login(data map[string]string) (*fiber.Cookie, error, int) {
 		return nil, err, 400
 	}
 
-	return utils.CreateAuthCookieAndHandleError(user.Id)
+	return utils.CreateAuthCookieAndHandleError(user.Id, 30)
 }
 
 func (a authService) BackupCodeLogin(data map[string]string) (*fiber.Cookie, error, int) {
@@ -71,7 +71,7 @@ func (a authService) BackupCodeLogin(data map[string]string) (*fiber.Cookie, err
 			return nil, errors.New("could not delete backup code"), 500
 		}
 
-		return utils.CreateAuthCookieAndHandleError(user.Id)
+		return utils.CreateAuthCookieAndHandleError(user.Id, 5)
 	}
 	return nil, errors.New("unauthorized"), 400
 }
