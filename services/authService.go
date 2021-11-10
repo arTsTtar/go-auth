@@ -19,6 +19,8 @@ type AuthService interface {
 	Register(c request.UserRequest) (response.UserCreationResponse, error)
 	Logout() *fiber.Cookie
 	GetUserDetailsFromToken(token *jwt.Token) (response.SimpleUserResponse, error)
+	ChangePassword(id string, data request.ChangePassword) (*entity.User, error)
+	Disable2FA(user *entity.User) error
 }
 
 type authService struct {
@@ -144,6 +146,29 @@ func (a authService) GetUserDetailsFromToken(token *jwt.Token) (response.SimpleU
 		TwoFactEnabled: user.TwoFactEnabled,
 	}
 	return userResponse, nil
+}
+
+func (a authService) ChangePassword(id string, data request.ChangePassword) (*entity.User, error) {
+	password, err := bcrypt.GenerateFromPassword([]byte(*data.Password), 12)
+	if err != nil {
+		return nil, errors.New("something went wrong while encrypting password")
+	}
+	err = a.userRepository.UpdatePassword(id, password)
+
+	if err != nil {
+		return nil, err
+	}
+
+	user, _ := a.userRepository.FindUserById(id)
+	return &user, nil
+}
+
+func (a authService) Disable2FA(user *entity.User) error {
+	err := a.userRepository.DisableUser2FA(user)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (a authService) getUserByEmail(email string) (*entity.User, error) {

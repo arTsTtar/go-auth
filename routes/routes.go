@@ -15,9 +15,13 @@ func Setup(app *fiber.App) {
 	authController := controllers.NewAuthController(authService)
 	userController := controllers.NewUerController(authService)
 
+	// Auth Endpoints
 	app.Post("/api/register", authController.Register)
 	app.Post("/api/login", authController.Login)
 	app.Post("/api/altLogin", authController.AltLogin)
-	app.Get("/api/user", userController.User)
 	app.Post("/api/logout", authController.Logout)
+
+	//user endpoints
+	app.Get("/api/user", userController.User)
+	app.Post("/api/user/changePassword", userController.ChangePasswordAndUpdate2FA)
 }

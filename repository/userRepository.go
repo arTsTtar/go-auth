@@ -15,6 +15,8 @@ type UserRepository interface {
 	FindUserById(id string) (entity.User, error)
 	Save(user entity.User) (entity.User, error)
 	FindAllUsers() (entity.Users, error)
+	UpdatePassword(id string, password []byte) error
+	DisableUser2FA(user *entity.User) error
 }
 
 func NewUserRepository(db *gorm.DB) UserRepository {
@@ -45,4 +47,16 @@ func (u userRepository) Save(user entity.User) (entity.User, error) {
 	log.Print("[UserRepository]...Save")
 	err := u.DB.Create(&user).Error
 	return user, err
+}
+
+func (u userRepository) UpdatePassword(id string, password []byte) error {
+	log.Print("[UserRepository]...UpdatePassword")
+	err := u.DB.Model(&entity.User{}).Where("id = ?", id).Update("password", password).Error
+	return err
+}
+
+func (u userRepository) DisableUser2FA(user *entity.User) error {
+	log.Print("[UserRepository]...DisableUser2FA")
+	err := u.DB.Model(&user).Select("TwoFactEnabled", "TwoFactSecret").Updates(entity.User{TwoFactEnabled: false, TwoFactSecret: ""}).Error
+	return err
 }

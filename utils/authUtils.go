@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"github.com/pquerna/otp/totp"
@@ -78,6 +79,17 @@ func CreateAuthCookie(userId uint, secret string) (fiber.Cookie, error) {
 		HTTPOnly: true,
 	}, nil
 
+}
+
+func CheckAuthenticationFromCookie(c *fiber.Ctx) (*jwt.Token, error) {
+	cookie := c.Cookies("jwtToken")
+	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(SecretKey), nil
+	})
+	if err != nil {
+		return nil, errors.New("unauthenticated")
+	}
+	return token, nil
 }
 func CreateBackupCodes() [6]string {
 	var backupCodes [6]string
