@@ -60,7 +60,7 @@ func (a authService) BackupCodeLogin(data map[string]string) (*fiber.Cookie, err
 	backupCodes, err = a.backupCodeRepository.FindByUser(*user)
 
 	for i := 0; i < len(backupCodes); i++ {
-		err = utils.CompareHashAndPassword(backupCodes[i].BackupCode, []byte(data["password"]))
+		err = utils.CompareHashAndPassword(backupCodes[i].BackupCode, []byte(data["backupCode"]))
 		if err != nil {
 			continue
 		}
