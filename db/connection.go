@@ -1,7 +1,6 @@
 package db
 
 import (
-	"go-auth/models/entity"
 	"go-auth/utils"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -24,7 +23,5 @@ func Connect() {
 	}
 
 	DB = connection
-
-	connection.AutoMigrate(&entity.User{}, &entity.BackupCode{})
 
 }

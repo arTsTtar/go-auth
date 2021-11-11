@@ -9,12 +9,18 @@ import (
 
 func main() {
 	db.Connect()
+	db.Automigrate()
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
 		AllowCredentials: true,
 	}))
 
+	port := ":8000"
 	routes.Setup(app)
-	app.Listen(":8000")
+	err := app.Listen(port)
+	if err != nil {
+		panic("could not listen to port " + port)
+		return
+	}
 }
