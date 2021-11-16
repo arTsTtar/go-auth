@@ -1,6 +1,8 @@
 package response
 
-import "go-auth/models/entity"
+import (
+	"go-auth/entity"
+)
 
 type SimpleUserResponse struct {
 	Id             uint   `json:"id"`

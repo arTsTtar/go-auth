@@ -10,8 +10,9 @@ import (
 
 func Setup(app *fiber.App) {
 	userRepository := repository.NewUserRepository(db.DB)
+	roleRepository := repository.NewRoleRepository(db.DB)
 	backupCodeRepository := repository.NewBackupCodeRepository(db.DB)
-	authService := services.NewAuthService(userRepository, backupCodeRepository)
+	authService := services.NewAuthService(userRepository, roleRepository, backupCodeRepository)
 	authController := controllers.NewAuthController(authService)
 	userController := controllers.NewUerController(authService)
 

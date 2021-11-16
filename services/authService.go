@@ -4,9 +4,10 @@ import (
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
+	"go-auth/entity"
 	"go-auth/models/dto/request"
 	"go-auth/models/dto/response"
-	"go-auth/models/entity"
+	enumRole "go-auth/models/struct/role"
 	"go-auth/repository"
 	"go-auth/utils"
 	"golang.org/x/crypto/bcrypt"
@@ -18,7 +19,7 @@ type AuthService interface {
 	BackupCodeLogin(data map[string]string) (*fiber.Cookie, error, int)
 	Register(c request.UserRequest) (response.UserCreationResponse, error)
 	Logout() *fiber.Cookie
-	GetUserDetailsFromToken(token *jwt.Token) (response.SimpleUserResponse, error)
+	GetUserDetailsFromToken(token jwt.Token) (response.SimpleUserResponse, error)
 	ChangePassword(id string, data request.ChangePassword) (*entity.User, error)
 	Disable2FA(user *entity.User) error
 }
@@ -26,11 +27,14 @@ type AuthService interface {
 type authService struct {
 	backupCodeRepository repository.BackupCodeRepository
 	userRepository       repository.UserRepository
+	roleRepository       repository.RoleRepository
 }
 
-func NewAuthService(ur repository.UserRepository, bcr repository.BackupCodeRepository) AuthService {
+func NewAuthService(ur repository.UserRepository, rr repository.RoleRepository,
+	bcr repository.BackupCodeRepository) AuthService {
 	return authService{
 		userRepository:       ur,
+		roleRepository:       rr,
 		backupCodeRepository: bcr,
 	}
 }
@@ -46,7 +50,7 @@ func (a authService) Login(data map[string]string) (*fiber.Cookie, error, int) {
 		return nil, err, 400
 	}
 
-	return utils.CreateAuthCookieAndHandleError(user.Id, 30)
+	return utils.CreateAuthCookieAndHandleError(user, 30)
 }
 
 func (a authService) BackupCodeLogin(data map[string]string) (*fiber.Cookie, error, int) {
@@ -71,7 +75,7 @@ func (a authService) BackupCodeLogin(data map[string]string) (*fiber.Cookie, err
 			return nil, errors.New("could not delete backup code"), 500
 		}
 
-		return utils.CreateAuthCookieAndHandleError(user.Id, 5)
+		return utils.CreateAuthCookieAndHandleError(user, 5)
 	}
 	return nil, errors.New("unauthorized"), 400
 }
@@ -81,7 +85,7 @@ func (a authService) Register(data request.UserRequest) (response.UserCreationRe
 	existingUser, _ = a.userRepository.FindUserByEmail(*data.Email)
 
 	if existingUser.Id != 0 {
-		return response.UserCreationResponse{}, fiber.NewError(400, "User already exists")
+		return response.UserCreationResponse{}, fiber.NewError(400, "Client already exists")
 	}
 	password, _ := bcrypt.GenerateFromPassword([]byte(*data.Password), 12)
 
@@ -89,10 +93,16 @@ func (a authService) Register(data request.UserRequest) (response.UserCreationRe
 
 	var qrData = utils.GenerateB64Qr(data)
 
+	clientRole, err := a.roleRepository.FindByName(enumRole.Client.String())
+
+	if err != nil {
+		return response.UserCreationResponse{}, fiber.NewError(500, "Role not found - "+enumRole.Client.String())
+	}
 	user := entity.User{
 		Name:           *data.Name,
 		Email:          *data.Email,
 		Password:       password,
+		Roles:          []entity.Role{clientRole},
 		TwoFactEnabled: qrData.TwoFactEnabled,
 		TwoFactSecret:  qrData.Secret,
 	}
@@ -132,12 +142,12 @@ func (a authService) Logout() *fiber.Cookie {
 	return &cookie
 }
 
-func (a authService) GetUserDetailsFromToken(token *jwt.Token) (response.SimpleUserResponse, error) {
-	claims := token.Claims.(*jwt.StandardClaims)
+func (a authService) GetUserDetailsFromToken(token jwt.Token) (response.SimpleUserResponse, error) {
+	claims := token.Claims.(jwt.MapClaims)
 
 	var user entity.User
 
-	user, _ = a.userRepository.FindUserById(claims.Issuer)
+	user, _ = a.userRepository.FindUserById(claims["Issuer"].(string))
 
 	userResponse := response.SimpleUserResponse{
 		Id:             user.Id,

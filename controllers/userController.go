@@ -36,7 +36,7 @@ func (u userController) User(c *fiber.Ctx) error {
 		})
 	}
 
-	userResponse, err := u.authService.GetUserDetailsFromToken(token)
+	userResponse, err := u.authService.GetUserDetailsFromToken(*token)
 	return c.JSON(userResponse)
 }
 
@@ -63,9 +63,9 @@ func (u userController) ChangePasswordAndUpdate2FA(c *fiber.Ctx) error {
 		})
 	}
 
-	claims := token.Claims.(*jwt.StandardClaims)
+	claims := token.Claims.(jwt.MapClaims)
 
-	user, err := u.authService.ChangePassword(claims.Issuer, data)
+	user, err := u.authService.ChangePassword(claims["Issuer"].(string), data)
 
 	if data.Disable2FA {
 		err = u.authService.Disable2FA(user)

@@ -24,8 +24,6 @@ func NewAuthController(s services.AuthService) AuthController {
 	}
 }
 
-const SecretKey = "adsfadsfasdfnuasnfuias23as98fasj8dfjas/asdfiijasdf"
-
 func (a authController) Register(c *fiber.Ctx) error {
 	var data request.UserRequest
 	if err := json.Unmarshal(c.Body(), &data); err != nil {

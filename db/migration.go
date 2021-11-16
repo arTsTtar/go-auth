@@ -1,21 +1,17 @@
 package db
 
 import (
-	"github.com/harranali/authority"
-	"go-auth/models/entity"
+	"go-auth/db/seeds"
+	"go-auth/entity"
 )
 
 func Automigrate() {
 
-	err := DB.AutoMigrate(&entity.User{}, &entity.BackupCode{})
+	err := DB.AutoMigrate(&entity.User{}, &entity.BackupCode{}, &entity.Role{})
 	if err != nil {
 		panic("could not connect to db")
 		return
 	}
+	seeds.Execute(DB)
 
-	//Initialize authority tables
-	_ = authority.New(authority.Options{
-		TablesPrefix: "authority_",
-		DB:           DB,
-	})
 }

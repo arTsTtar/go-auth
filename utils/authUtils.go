@@ -7,6 +7,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"github.com/pquerna/otp/totp"
+	"go-auth/entity"
 	"go-auth/models/dto/request"
 	_struct "go-auth/models/struct"
 	"image/png"
@@ -49,8 +50,8 @@ func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 	}
 }
 
-func CreateAuthCookieAndHandleError(userId uint, minutes time.Duration) (*fiber.Cookie, error, int) {
-	cookie, err := CreateAuthCookie(userId, SecretKey, minutes)
+func CreateAuthCookieAndHandleError(user *entity.User, minutes time.Duration) (*fiber.Cookie, error, int) {
+	cookie, err := CreateAuthCookie(user, SecretKey, minutes)
 
 	if err != nil {
 		return nil, err, 500
@@ -60,10 +61,11 @@ func CreateAuthCookieAndHandleError(userId uint, minutes time.Duration) (*fiber.
 
 }
 
-func CreateAuthCookie(userId uint, secret string, minutes time.Duration) (fiber.Cookie, error) {
-	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		Issuer:    strconv.Itoa(int(userId)),
-		ExpiresAt: time.Now().Add(time.Minute * minutes).Unix(),
+func CreateAuthCookie(user *entity.User, secret string, minutes time.Duration) (fiber.Cookie, error) {
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"Issuer":    strconv.Itoa(int(user.Id)),
+		"Roles":     user.Roles,
+		"ExpiresAt": time.Now().Add(time.Minute * minutes).Unix(),
 	})
 
 	token, err := claims.SignedString([]byte(secret))
@@ -75,7 +77,7 @@ func CreateAuthCookie(userId uint, secret string, minutes time.Duration) (fiber.
 	return fiber.Cookie{
 		Name:     "jwtToken",
 		Value:    token,
-		Expires:  time.Now().Add(time.Minute * 5),
+		Expires:  time.Now().Add(time.Minute * minutes),
 		HTTPOnly: true,
 	}, nil
 
@@ -83,7 +85,7 @@ func CreateAuthCookie(userId uint, secret string, minutes time.Duration) (fiber.
 
 func CheckAuthenticationFromCookie(c *fiber.Ctx) (*jwt.Token, error) {
 	cookie := c.Cookies("jwtToken")
-	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(cookie, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(SecretKey), nil
 	})
 	if err != nil {

@@ -13,8 +13,9 @@ func Connect() {
 	dbPass := utils.GoDotEnvVariable("MYSQL_ROOT_PASSWORD")
 	dbHost := utils.GoDotEnvVariable("dbHost")
 	dbPort := utils.GoDotEnvVariable("dbPort")
+	dbLoc := utils.GoDotEnvVariable("dbLoc")
 	dbName := utils.GoDotEnvVariable("MYSQL_DATABASE")
-	connString := dbUser + ":" + dbPass + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName
+	connString := dbUser + ":" + dbPass + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?parseTime=true&" + dbLoc
 
 	connection, err := gorm.Open(mysql.Open(connString), &gorm.Config{})
 

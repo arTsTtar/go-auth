@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"go-auth/models/entity"
+	"go-auth/entity"
 	"gorm.io/gorm"
 	"log"
 )
@@ -27,19 +27,19 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (u userRepository) FindUserByEmail(email string) (user entity.User, err error) {
 	log.Print("[UserRepository]...FindUserByEmail")
-	err = u.DB.Where("email = ?", email).First(&user).Error
+	err = u.DB.Preload("Roles").Where("email = ?", email).First(&user).Error
 	return user, err
 }
 
 func (u userRepository) FindAllUsers() (users entity.Users, err error) {
 	log.Print("[UserRepository]...FindAllUsers")
-	err = u.DB.Find(&users).Error
+	err = u.DB.Preload("Roles").Find(&users).Error
 	return users, err
 }
 
 func (u userRepository) FindUserById(id string) (user entity.User, err error) {
 	log.Print("[UserRepository]...FindUserById")
-	err = u.DB.Where("id = ?", id).First(&user).Error
+	err = u.DB.Preload("Roles").Where("id = ?", id).First(&user).Error
 	return user, err
 }
 

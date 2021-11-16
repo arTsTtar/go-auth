@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"go-auth/models/entity"
+	"go-auth/entity"
 	"gorm.io/gorm"
 	"log"
 )
