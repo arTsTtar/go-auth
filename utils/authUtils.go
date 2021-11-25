@@ -7,7 +7,6 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"github.com/pquerna/otp/totp"
-	"go-auth/entity"
 	"go-auth/models/dto/request"
 	_struct "go-auth/models/struct"
 	"image/png"
@@ -50,8 +49,8 @@ func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 	}
 }
 
-func CreateAuthCookieAndHandleError(user *entity.User, minutes time.Duration) (*fiber.Cookie, error, int) {
-	cookie, err := CreateAuthCookie(user, SecretKey, minutes)
+func CreateAuthCookieAndHandleError(userId uint, minutes time.Duration) (*fiber.Cookie, error, int) {
+	cookie, err := CreateAuthCookie(userId, SecretKey, minutes)
 
 	if err != nil {
 		return nil, err, 500
@@ -61,10 +60,9 @@ func CreateAuthCookieAndHandleError(user *entity.User, minutes time.Duration) (*
 
 }
 
-func CreateAuthCookie(user *entity.User, secret string, minutes time.Duration) (fiber.Cookie, error) {
+func CreateAuthCookie(userId uint, secret string, minutes time.Duration) (fiber.Cookie, error) {
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"Issuer":    strconv.Itoa(int(user.Id)),
-		"Roles":     user.Roles,
+		"Issuer":    strconv.Itoa(int(userId)),
 		"ExpiresAt": time.Now().Add(time.Minute * minutes).Unix(),
 	})
 
