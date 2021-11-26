@@ -66,6 +66,7 @@ func (a authController) Login(c *fiber.Ctx) error {
 	c.Status(status)
 	return c.JSON(fiber.Map{
 		"message": "Successfully logged in!",
+		"token":   cookie.Value,
 	})
 }
 
