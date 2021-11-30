@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-const SecretKey = "adsfadsfasdfnuasnfuias23as98fasj8dfjas/asdfiijasdf"
-
 func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 	if data.TwoFactEnabled {
 		key, err := totp.Generate(totp.GenerateOpts{
@@ -51,7 +49,7 @@ func GenerateB64Qr(data request.UserRequest) _struct.QrData {
 }
 
 func CreateAuthCookieAndHandleError(user *entity.User, minutes time.Duration) (*fiber.Cookie, error, int) {
-	cookie, err := CreateAuthCookie(user, SecretKey, minutes)
+	cookie, err := CreateAuthCookie(user, GoDotEnvVariable("jwtSecret"), minutes)
 
 	if err != nil {
 		return nil, err, 500
@@ -86,7 +84,7 @@ func CreateAuthCookie(user *entity.User, secret string, minutes time.Duration) (
 func CheckAuthenticationFromCookie(c *fiber.Ctx) (*jwt.Token, error) {
 	cookie := c.Cookies("jwtToken")
 	token, err := jwt.ParseWithClaims(cookie, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(SecretKey), nil
+		return []byte(GoDotEnvVariable("jwtSecret")), nil
 	})
 	if err != nil {
 		return nil, errors.New("unauthenticated")
