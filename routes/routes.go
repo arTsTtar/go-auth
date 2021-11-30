@@ -20,7 +20,6 @@ func Setup(app *fiber.App) {
 
 	// ADMIN ENDPOINTS:
 	app.Get("/api/admin/users", adminController.GetUserList)
-	app.Post("/api/admin/user/reset", userController.User)
 
 	// Auth Endpoints (User)
 	app.Post("/api/register", authController.Register)
@@ -31,4 +30,5 @@ func Setup(app *fiber.App) {
 	//user endpoints
 	app.Get("/api/user", userController.User)
 	app.Post("/api/user/changePassword", userController.ChangePasswordAndUpdate2FA)
+	app.Post("/api/user/:id/resetPassword", userController.ResetToRandomPassword)
 }

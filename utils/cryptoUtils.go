@@ -6,17 +6,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func GenerateRandomPasswd() string {
+func GenerateRandomPasswd() *string {
 	return getToken(8)
 }
 
-func getToken(length int) string {
+func getToken(length int) *string {
 	randomBytes := make([]byte, 32)
 	_, err := rand.Read(randomBytes)
 	if err != nil {
 		panic(err)
 	}
-	return base32.StdEncoding.EncodeToString(randomBytes)[:length]
+	token := base32.StdEncoding.EncodeToString(randomBytes)[:length]
+	return &token
 }
 
 func CompareHashAndPassword(hash []byte, password []byte) error {

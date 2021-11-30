@@ -13,6 +13,7 @@ import (
 type UserController interface {
 	User(c *fiber.Ctx) error
 	ChangePasswordAndUpdate2FA(c *fiber.Ctx) error
+	ResetToRandomPassword(c *fiber.Ctx) error
 }
 
 type userController struct {
@@ -40,6 +41,53 @@ func (u userController) User(c *fiber.Ctx) error {
 
 	userResponse, err := u.authService.GetUserDetails(claims["Issuer"].(string))
 	return c.JSON(userResponse)
+}
+
+func (u userController) ResetToRandomPassword(c *fiber.Ctx) error {
+	token, err := utils.CheckAuthenticationFromCookie(c)
+
+	if err != nil && err.Error() == "unauthenticated" {
+		c.Status(fiber.StatusUnauthorized)
+		return c.JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+	claims := token.Claims.(jwt.MapClaims)
+
+	id := c.Params("id")
+	var issuer = claims["Issuer"].(string)
+
+	if issuer != id {
+		isAdmin, err := u.authService.CheckIfUserIsAdmin(issuer)
+
+		if err != nil {
+			c.Status(fiber.StatusBadRequest)
+			return c.JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		}
+		if !isAdmin {
+			c.Status(fiber.StatusUnauthorized)
+			return c.JSON(fiber.Map{
+				"message": "unauthorized access for the resource",
+			})
+		}
+	}
+
+	generatedPassword := utils.GenerateRandomPasswd()
+	user, err := u.authService.ChangePassword(id, request.ChangePassword{
+		Password:   generatedPassword,
+		Disable2FA: false,
+	})
+
+	if err != nil {
+		c.Status(fiber.StatusBadRequest)
+		return c.JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	return c.JSON(response.ToPasswordResetResponse(&user.Email, generatedPassword, &user.Name))
 }
 
 func (u userController) ChangePasswordAndUpdate2FA(c *fiber.Ctx) error {
