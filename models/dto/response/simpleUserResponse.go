@@ -2,6 +2,7 @@ package response
 
 import (
 	"go-auth/entity"
+	"time"
 )
 
 type SimpleUserResponse struct {
@@ -18,7 +19,7 @@ func ToSimpleUserResponse(user *entity.User) (userResponse SimpleUserResponse) {
 		Name:           user.Name,
 		Email:          user.Email,
 		TwoFactEnabled: user.TwoFactEnabled,
-		UpdatedAt:      user.UpdatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:      user.UpdatedAt.In(time.Local).Format("2006-01-02 15:04:05"),
 	}
 }
 
