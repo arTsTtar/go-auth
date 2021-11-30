@@ -13,10 +13,16 @@ func Setup(app *fiber.App) {
 	roleRepository := repository.NewRoleRepository(db.DB)
 	backupCodeRepository := repository.NewBackupCodeRepository(db.DB)
 	authService := services.NewAuthService(userRepository, roleRepository, backupCodeRepository)
+	userService := services.NewUserService(userRepository, authService)
 	authController := controllers.NewAuthController(authService)
-	userController := controllers.NewUerController(authService)
+	userController := controllers.NewUserController(authService)
+	adminController := controllers.NewAdminController(authService, userService)
 
-	// Auth Endpoints
+	// ADMIN ENDPOINTS:
+	app.Get("/api/admin/users", adminController.GetUserList)
+	app.Post("/api/admin/user/reset", userController.User)
+
+	// Auth Endpoints (User)
 	app.Post("/api/register", authController.Register)
 	app.Post("/api/login", authController.Login)
 	app.Post("/api/altLogin", authController.AltLogin)

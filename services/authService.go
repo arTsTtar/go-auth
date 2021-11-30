@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"go-auth/entity"
 	"go-auth/models/dto/request"
@@ -19,7 +18,8 @@ type AuthService interface {
 	BackupCodeLogin(data map[string]string) (*fiber.Cookie, error, int)
 	Register(c request.UserRequest) (response.UserCreationResponse, error)
 	Logout() *fiber.Cookie
-	GetUserDetailsFromToken(token jwt.Token) (response.SimpleUserResponse, error)
+	GetUserDetails(id string) (response.SimpleUserResponse, error)
+	CheckIfUserIsAdmin(id string) (bool, error)
 	ChangePassword(id string, data request.ChangePassword) (*entity.User, error)
 	Disable2FA(user *entity.User) error
 }
@@ -142,12 +142,10 @@ func (a authService) Logout() *fiber.Cookie {
 	return &cookie
 }
 
-func (a authService) GetUserDetailsFromToken(token jwt.Token) (response.SimpleUserResponse, error) {
-	claims := token.Claims.(jwt.MapClaims)
-
+func (a authService) GetUserDetails(id string) (response.SimpleUserResponse, error) {
 	var user entity.User
 
-	user, _ = a.userRepository.FindUserById(claims["Issuer"].(string))
+	user, _ = a.userRepository.FindUserById(id)
 
 	userResponse := response.SimpleUserResponse{
 		Id:             user.Id,
@@ -156,6 +154,20 @@ func (a authService) GetUserDetailsFromToken(token jwt.Token) (response.SimpleUs
 		TwoFactEnabled: user.TwoFactEnabled,
 	}
 	return userResponse, nil
+}
+
+func (a authService) CheckIfUserIsAdmin(id string) (bool, error) {
+	user, err := a.userRepository.FindUserById(id)
+
+	if err != nil {
+		return false, err
+	}
+	for _, a := range user.Roles {
+		if a.Name == "ROLE_ADMIN" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (a authService) ChangePassword(id string, data request.ChangePassword) (*entity.User, error) {

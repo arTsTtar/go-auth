@@ -9,6 +9,7 @@ type SimpleUserResponse struct {
 	Name           string `json:"name"`
 	Email          string `json:"email"`
 	TwoFactEnabled bool   `json:"twoFaEnabled"`
+	UpdatedAt      string `json:"updatedAt"`
 }
 
 func ToSimpleUserResponse(user *entity.User) (userResponse SimpleUserResponse) {
@@ -17,5 +18,8 @@ func ToSimpleUserResponse(user *entity.User) (userResponse SimpleUserResponse) {
 		Name:           user.Name,
 		Email:          user.Email,
 		TwoFactEnabled: user.TwoFactEnabled,
+		UpdatedAt:      user.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 }
+
+type SimpleUserResponseArray []SimpleUserResponse

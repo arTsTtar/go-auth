@@ -19,7 +19,7 @@ type userController struct {
 	authService services.AuthService
 }
 
-func NewUerController(as services.AuthService) UserController {
+func NewUserController(as services.AuthService) UserController {
 	return userController{
 		authService: as,
 	}
@@ -36,7 +36,9 @@ func (u userController) User(c *fiber.Ctx) error {
 		})
 	}
 
-	userResponse, err := u.authService.GetUserDetailsFromToken(*token)
+	claims := token.Claims.(jwt.MapClaims)
+
+	userResponse, err := u.authService.GetUserDetails(claims["Issuer"].(string))
 	return c.JSON(userResponse)
 }
 
